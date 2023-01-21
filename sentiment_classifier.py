@@ -1,10 +1,10 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import torch
-from args import parse_args
+from scripts.args import parse_args
 import time
 from data.dataset import TweetsDataset
-from net import TextClassificationModel
+from scripts.net import TextClassificationModel
 
 def main():
 

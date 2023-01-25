@@ -54,6 +54,7 @@ class TweetsDataset():
             offsets.append(processed_text.size(0))
         label_list = torch.tensor(label_list, dtype=torch.int64)
         offsets = torch.tensor(offsets[:-1]).cumsum(dim=0)
+        # print(offsets)
         text_list = torch.cat(text_list)
         return label_list.to(self.device), text_list.to(self.device), offsets.to(self.device)
 

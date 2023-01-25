@@ -13,18 +13,19 @@ def main():
     # Hyperparameters
     EPOCHS = args.epochs # epoch
     LR = args.learning  # learning rate
-    BATCH_SIZE = args.batch # batch size for training
+    BATCH_SIZE = 10 # batch size for training
 
     test_size = args.test
     train_size = 27480 - test_size
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # print(device)
 
     tweets = TweetsDataset(train_size)
     tweets.to_device(device)
 
     num_class = len(set([label for (label, _) in tweets.train_iter]))
     vocab_size = len(tweets.vocab)
-    emsize = 64
+    emsize = 10
 
     model = TextClassificationModel(vocab_size, emsize, num_class).to(device)
 

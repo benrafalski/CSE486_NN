@@ -5,13 +5,22 @@ import torch
 
 class TextClassificationModel(nn.Module):
 
-    def __init__(self, vocab_size, embed_dim, num_class):
+    def __init__(self, vocab_size, embedding_dim, num_class):
         super(TextClassificationModel, self).__init__()
-        self.embedding = nn.EmbeddingBag(vocab_size, embed_dim, sparse=True)
-        self.fc1 = nn.Linear(embed_dim, embed_dim)
-        self.fc2 = nn.Linear(embed_dim, embed_dim)
-        self.fc3 = nn.Linear(embed_dim, num_class)
-        self.init_weights()
+        # self.embedding = nn.EmbeddingBag(vocab_size, embed_dim, sparse=True)
+        # # self.flat = nn.Flatten()
+        
+        # # self.conv1 = nn.Conv2d(embed_dim, embed_dim, 5)
+        # # self.conv2 = nn.Conv2d(embed_dim, embed_dim, 5)
+        # self.fc1 = nn.Linear(embed_dim, embed_dim)
+        # self.fc2 = nn.Linear(embed_dim, embed_dim)
+        # self.fc3 = nn.Linear(embed_dim, num_class)
+        # self.init_weights()
+
+        self.embedding = nn.Embedding(vocab_size,64)
+        self.lstm = nn.LSTM( input_size=64,hidden_size=64,num_layers=3,batch_first=True)
+        self.fc = nn.Linear(64, num_class)
+
 
     def init_weights(self):
         initrange = 0.5
@@ -25,10 +34,23 @@ class TextClassificationModel(nn.Module):
 
 
     def forward(self, text, offsets):
-        embedded = self.embedding(text, offsets)
-        x = F.relu(self.fc1(embedded))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
+        # x = self.embedding(text, offsets)
+        # # x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
+        # # x = F.max_pool2d(F.relu(self.conv2(x)), 2)
+        # x = torch.flatten(x, 1) 
+        # x = F.relu(self.fc1(x))
+        # x = F.relu(self.fc2(x))
+        # return self.fc3(x)
+
+
+        res = self.embedding(text)
+        h_0 = torch.zeros(3,len(text),64)
+        c_0 = torch.zeros(3,len(text),64)
+        output, (h_n,c_n) = self.lstm(res,(h_0,c_0))
+        output = output.reshape(len(text),-1)
+        return self.fc(output)
+
+        
 
     def fit(self, dataloader, epoch, optimizer):
         criterion = torch.nn.CrossEntropyLoss()

@@ -125,7 +125,7 @@ train_encoded = [(encode_and_pad(tweet, seq_length), label) for label, tweet in 
 
 test_encoded = [(encode_and_pad(tweet, seq_length), label) for label, tweet in test_set]
 
-batch_size = 50
+batch_size = 128
 
 train_x = np.array([tweet for tweet, label in train_encoded])
 train_y = np.array([label for tweet, label in train_encoded])
@@ -188,8 +188,9 @@ optimizer = torch.optim.Adam(model.parameters(), lr = 3e-4)
 
 epochs = 50
 losses = []
-for e in range(epochs):
 
+for e in range(epochs):
+    batch_acc = []
     print(f'epoch {e+1}')
 
     h0, c0 =  model.init_hidden()
@@ -198,6 +199,9 @@ for e in range(epochs):
     c0 = c0
 
     for batch_idx, batch in enumerate(train_dl):
+
+        if batch_idx % (len(train_dl)//100) == 0:
+            print(f'\tstarting batch number {batch_idx} of {len(train_dl)}')
 
         input = batch[0]
         target = batch[1]
@@ -208,6 +212,16 @@ for e in range(epochs):
             loss = criterion(out, target)
             loss.backward()
             optimizer.step()
+
+            _, preds = torch.max(out, 1)
+            preds = preds.to("cpu").tolist()
+            batch_acc.append(accuracy_score(preds, target.tolist()))
+
+        
+    print(f'epoch accracy = {sum(batch_acc)/len(batch_acc)}')
+
+
+
     losses.append(loss.item())
 
 batch_acc = []

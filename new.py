@@ -1,3 +1,4 @@
+from unicodedata import bidirectional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -151,7 +152,7 @@ class BiLSTM_SentimentAnalysis(torch.nn.Module) :
 
         # The LSTM layer takes in the the embedding size and the hidden vector size.
         # The hidden dimension is up to you to decide, but common values are 32, 64, 128
-        self.lstm = nn.LSTM(embedding_dim, lstm_units, batch_first=True)
+        self.lstm = nn.LSTM(embedding_dim, lstm_units, num_layers=2, bidirectional=False, batch_first=True)
         self.fc1 = nn.Linear(lstm_units, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, 3)
         self.relu = nn.ReLU()
@@ -188,13 +189,13 @@ class BiLSTM_SentimentAnalysis(torch.nn.Module) :
         return preds, hidden
     
     def init_hidden(self):
-        return (torch.zeros(1, batch_size, self.lstm_units), torch.zeros(1, batch_size, self.lstm_units))
+        return (torch.zeros(2, batch_size, self.lstm_units), torch.zeros(2, batch_size, self.lstm_units))
 
 model = BiLSTM_SentimentAnalysis(len(word2index), 64, 32, 32, 0.2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr = 3e-4)
 
-epochs = 50
+epochs = 30
 losses = []
 
 for e in range(epochs):

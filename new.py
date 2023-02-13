@@ -139,25 +139,29 @@ train_dl = DataLoader(train_ds, shuffle=True, batch_size=batch_size, drop_last=T
 test_dl = DataLoader(test_ds, shuffle=True, batch_size=batch_size, drop_last=True)
 
 
-
 class BiLSTM_SentimentAnalysis(torch.nn.Module) :
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout) :
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, lstm_units, dropout) :
         super().__init__()
 
+        self.lstm_units = lstm_units
+        
         # The embedding layer takes the vocab size and the embeddings size as input
         # The embeddings size is up to you to decide, but common sizes are between 50 and 100.
         self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
 
         # The LSTM layer takes in the the embedding size and the hidden vector size.
         # The hidden dimension is up to you to decide, but common values are 32, 64, 128
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, batch_first=True)
+        self.lstm = nn.LSTM(embedding_dim, lstm_units, batch_first=True)
+        self.fc1 = nn.Linear(lstm_units, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, 3)
+        self.relu = nn.ReLU()
 
         # We use dropout before the final layer to improve with regularization
         self.dropout = nn.Dropout(dropout)
 
         # The fully-connected layer takes in the hidden dim of the LSTM and
         #  outputs a a 3x1 vector of the class scores.
-        self.fc = nn.Linear(hidden_dim, 3)
+        
 
     def forward(self, x, hidden):
         """
@@ -171,18 +175,22 @@ class BiLSTM_SentimentAnalysis(torch.nn.Module) :
         out, hidden = self.lstm(embs, hidden)
 
         # Dropout is applied to the output and fed to the FC layer
-        out = self.dropout(out)
-        out = self.fc(out)
+        #out = self.dropout(out)
+        #out = self.fc(out)
 
         # We extract the scores for the final hidden state since it is the one that matters.
         out = out[:, -1]
-        return out, hidden
+
+        rel = self.relu(out)
+        dense1 = self.fc1(rel)
+        drop = self.dropout(dense1)
+        preds = self.fc2(drop)
+        return preds, hidden
     
     def init_hidden(self):
-        return (torch.zeros(1, batch_size, 32), torch.zeros(1, batch_size, 32))
+        return (torch.zeros(1, batch_size, self.lstm_units), torch.zeros(1, batch_size, self.lstm_units))
 
-model = BiLSTM_SentimentAnalysis(len(word2index), 64, 32, 0.2)
-
+model = BiLSTM_SentimentAnalysis(len(word2index), 64, 32, 32, 0.2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr = 3e-4)
 

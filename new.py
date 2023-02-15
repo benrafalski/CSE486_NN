@@ -132,35 +132,35 @@ def encode_and_pad(tweet, length):
 
     if len(tweet) < length - 2: # -2 for SOS and EOS
         n_pads = length - 2 - len(tweet)
-        encoded = [word2index[w] for w in tweet]
+        #encoded = [word2index[w] for w in tweet]
 
-        #encoded = []
+        encoded = []
         
-        #for w in tweet:
-        #    try:
-        #        encoded.append(word2index[w])
+        for w in tweet:
+            try:
+                encoded.append(word2index[w])
             
-        #    except KeyError:
-        #        if (w != " "):
-        #            encoded.append(word2index["<unk>"])
-        #            print("word not recognized: " + w)
-        #sos.extend(encoded)
-        return sos + encoded +  eos + pad * n_pads 
+            except KeyError:
+                if (w != " "):
+                    encoded.append(word2index["<unk>"])
+                    print("word not recognized: " + w)
+        sos.extend(encoded)
+        return sos +  eos + pad * n_pads 
     else: # tweet is longer than possible; truncating
-        encoded = [word2index[w] for w in tweet]
-        #encoded = []
+        #encoded = [word2index[w] for w in tweet]
+        encoded = []
         
-        #for w in tweet:
-        #    try:
-        #        encoded.append(word2index[w])
+        for w in tweet:
+            try:
+                encoded.append(word2index[w])
             
-        #    except KeyError:
-        #        if (w != " "):
-        #            encoded.append(word2index["<unk>"])
-        #            print("word not recognized: " + w)
+            except KeyError:
+                if (w != " "):
+                    encoded.append(word2index["<unk>"])
+                    print("word not recognized: " + w)
         truncated = encoded[:length - 2]
-        #sos.extend(truncated)
-        return sos  + truncated + eos
+        sos.extend(truncated)
+        return sos   + eos
 
 
 

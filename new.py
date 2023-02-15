@@ -178,8 +178,8 @@ test_x = np.array([tweet for tweet, label in test_encoded])
 test_y = np.array([label for tweet, label in test_encoded])
 
 
-train_x = train_x.astype(float)
-test_x = test_x.astype(float)
+train_x = train_x.astype(int)
+test_x = test_x.astype(int)
 
 
 train_ds = TensorDataset(torch.from_numpy(train_x), torch.from_numpy(train_y).type(torch.LongTensor))

@@ -83,15 +83,12 @@ print(df.head())
 df.replace([1.0, 2.0, 3.0], 0, inplace=True)
 df.replace(4.0, 1, inplace=True)
 df.replace(5.0, 2, inplace=True)
-df["reviewText"] = df["reviewText"].str.replace("!", " ", regex=True)
-df["reviewText"] = df["reviewText"].str.replace("?", " ", regex=True)
-df["reviewText"] = df["reviewText"].str.replace(".", " ", regex=True)
-df["reviewText"] = df["reviewText"].str.replace(",", " ", regex=True)
-df["reviewText"] = df["reviewText"].str.replace(":", " ", regex=True)
-df["reviewText"] = df["reviewText"].str.replace(";", " ", regex=True)
-df["reviewText"] = df["reviewText"].str.replace("'", " ", regex=True)
-
 df['reviewText'] = df['reviewText'].apply(lambda x: " ".join(x.lower() for x in str(x).split()))
+
+noPunct = []
+for line in df["reviewText"]:
+    noPunct.append(line.translate({ord(c): None for c in ".!,:;'\/"}))
+df["reviewText"] = noPunct
 
 train_set, test_set = train_test_split(df.values.tolist(), test_size=0.15, random_state=64)
 train_df, valid_df = train_test_split(df.values.tolist(), test_size=0.15, random_state=64)
@@ -137,17 +134,17 @@ def encode_and_pad(tweet, length):
         n_pads = length - 2 - len(tweet)
         encoded = [word2index[w] for w in tweet]
 
-       #encoded = []
+        #encoded = []
         
-       # for w in tweet:
-       #     try:
-       #         encoded.append(word2index[w])
+        #for w in tweet:
+        #    try:
+        #        encoded.append(word2index[w])
             
-       #     except KeyError:
-       #         if (w != " "):
-       #             encoded.append(word2index["<unk>"])
-       #             #print("word not recognized: " + w)
-       # sos.extend(encoded)
+        #    except KeyError:
+        #        if (w != " "):
+        #            encoded.append(word2index["<unk>"])
+        #            print("word not recognized: " + w)
+        #sos.extend(encoded)
         return sos + encoded +  eos + pad * n_pads 
     else: # tweet is longer than possible; truncating
         encoded = [word2index[w] for w in tweet]
@@ -160,10 +157,10 @@ def encode_and_pad(tweet, length):
         #    except KeyError:
         #        if (w != " "):
         #            encoded.append(word2index["<unk>"])
-        #            #print("word not recognized: " + w)
+        #            print("word not recognized: " + w)
         truncated = encoded[:length - 2]
         #sos.extend(truncated)
-        return sos + truncated + eos
+        return sos  + truncated + eos
 
 
 

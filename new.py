@@ -95,7 +95,7 @@ train_df, valid_df = train_test_split(df.values.tolist(), test_size=0.15, random
 
 
 
-index2word = ["<PAD>", "<SOS>", "<EOS>"]
+index2word = ["<PAD>", "<SOS>", "<EOS>", "<UNK>"]
 
 
 for ds in [train_set, test_set]:
@@ -142,7 +142,7 @@ def encode_and_pad(tweet, length):
             
             except KeyError:
                 if (w != " "):
-                    encoded.append(word2index["<unk>"])
+                    encoded.append(word2index["<UNK>"])
                     print("word not recognized: " + w)
         sos.extend(encoded)
         return sos +  eos + pad * n_pads 
@@ -156,7 +156,7 @@ def encode_and_pad(tweet, length):
             
             except KeyError:
                 if (w != " "):
-                    encoded.append(word2index["<unk>"])
+                    encoded.append(word2index["<UNK>"])
                     print("word not recognized: " + w)
         truncated = encoded[:length - 2]
         sos.extend(truncated)

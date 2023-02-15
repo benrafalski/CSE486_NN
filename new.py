@@ -1,3 +1,4 @@
+from ast import Try
 from unicodedata import bidirectional
 import torch
 import torch.nn as nn
@@ -10,9 +11,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import nltk
 from nltk.tokenize import word_tokenize
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import json
+from collections import Counter
+from torchtext.vocab import vocab
+from torchtext.data.utils import get_tokenizer
 nltk.download('punkt')
+
 
 
 #train_path = "data/Tweets.csv"
@@ -78,6 +83,13 @@ print(df.head())
 df.replace([1.0, 2.0, 3.0], 0, inplace=True)
 df.replace(4.0, 1, inplace=True)
 df.replace(5.0, 2, inplace=True)
+df["reviewText"] = df["reviewText"].str.replace("!", " ", regex=True)
+df["reviewText"] = df["reviewText"].str.replace("?", " ", regex=True)
+df["reviewText"] = df["reviewText"].str.replace(".", " ", regex=True)
+df["reviewText"] = df["reviewText"].str.replace(",", " ", regex=True)
+df["reviewText"] = df["reviewText"].str.replace(":", " ", regex=True)
+df["reviewText"] = df["reviewText"].str.replace(";", " ", regex=True)
+df["reviewText"] = df["reviewText"].str.replace("'", " ", regex=True)
 
 df['reviewText'] = df['reviewText'].apply(lambda x: " ".join(x.lower() for x in str(x).split()))
 
@@ -100,13 +112,21 @@ word2index = {token: idx for idx, token in enumerate(index2word)}
 
 seq_length = 106
 
-#def label_map(label):
-#    if label == "negative":
-#        return 0
-#    elif label == "neutral":
-#        return 1
-#    else: #positive
-#        return 2
+def label_map(label):
+    if label == "0":
+        return 0
+    elif label == "1":
+        return 1
+    else: #positive
+        return 2
+
+
+#tokenizer = get_tokenizer('spacy')
+#counter = Counter()
+#for (label, line) in train_set:
+#    counter.update(tokenizer(line))
+#vocabs = vocab(counter, min_freq=10, specials=["<unk>", "<sos>", "<eos>", "<pad>"])
+#word2index = vocabs.get_stoi()
 
 def encode_and_pad(tweet, length):
     sos = [word2index["<SOS>"]]
@@ -116,11 +136,38 @@ def encode_and_pad(tweet, length):
     if len(tweet) < length - 2: # -2 for SOS and EOS
         n_pads = length - 2 - len(tweet)
         encoded = [word2index[w] for w in tweet]
-        return sos + encoded + eos + pad * n_pads 
+
+       #encoded = []
+        
+       # for w in tweet:
+       #     try:
+       #         encoded.append(word2index[w])
+            
+       #     except KeyError:
+       #         if (w != " "):
+       #             encoded.append(word2index["<unk>"])
+       #             #print("word not recognized: " + w)
+       # sos.extend(encoded)
+        return sos + encoded +  eos + pad * n_pads 
     else: # tweet is longer than possible; truncating
         encoded = [word2index[w] for w in tweet]
+        #encoded = []
+        
+        #for w in tweet:
+        #    try:
+        #        encoded.append(word2index[w])
+            
+        #    except KeyError:
+        #        if (w != " "):
+        #            encoded.append(word2index["<unk>"])
+        #            #print("word not recognized: " + w)
         truncated = encoded[:length - 2]
+        #sos.extend(truncated)
         return sos + truncated + eos
+
+
+
+
 
 train_encoded = [(encode_and_pad(tweet, seq_length), label) for label, tweet in train_set]
 
@@ -133,6 +180,11 @@ train_y = np.array([label for tweet, label in train_encoded])
 test_x = np.array([tweet for tweet, label in test_encoded])
 test_y = np.array([label for tweet, label in test_encoded])
 
+
+
+
+
+
 train_ds = TensorDataset(torch.from_numpy(train_x), torch.from_numpy(train_y).type(torch.LongTensor))
 test_ds = TensorDataset(torch.from_numpy(test_x), torch.from_numpy(test_y).type(torch.LongTensor))
 
@@ -141,18 +193,18 @@ test_dl = DataLoader(test_ds, shuffle=True, batch_size=batch_size, drop_last=Tru
 
 
 class BiLSTM_SentimentAnalysis(torch.nn.Module) :
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, lstm_units, dropout) :
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, lstm_units, num_layers, dropout) :
         super().__init__()
 
         self.lstm_units = lstm_units
-        
+        self.num_layers = num_layers
         # The embedding layer takes the vocab size and the embeddings size as input
         # The embeddings size is up to you to decide, but common sizes are between 50 and 100.
         self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
 
         # The LSTM layer takes in the the embedding size and the hidden vector size.
         # The hidden dimension is up to you to decide, but common values are 32, 64, 128
-        self.lstm = nn.LSTM(embedding_dim, lstm_units, num_layers=2, bidirectional=False, batch_first=True)
+        self.lstm = nn.LSTM(embedding_dim, lstm_units, num_layers=num_layers, bidirectional=False, batch_first=True)
         self.fc1 = nn.Linear(lstm_units, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, 3)
         self.relu = nn.ReLU()
@@ -189,9 +241,9 @@ class BiLSTM_SentimentAnalysis(torch.nn.Module) :
         return preds, hidden
     
     def init_hidden(self):
-        return (torch.zeros(2, batch_size, self.lstm_units), torch.zeros(2, batch_size, self.lstm_units))
+        return (torch.zeros(self.num_layers, batch_size, self.lstm_units), torch.zeros(self.num_layers, batch_size, self.lstm_units))
 
-model = BiLSTM_SentimentAnalysis(len(word2index), 64, 32, 32, 0.2)
+model = BiLSTM_SentimentAnalysis(len(word2index), 64, 32, 32, 2, 0.2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr = 3e-4)
 

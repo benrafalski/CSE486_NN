@@ -87,7 +87,7 @@ df['reviewText'] = df['reviewText'].apply(lambda x: " ".join(x.lower() for x in 
 
 noPunct = []
 for line in df["reviewText"]:
-    noPunct.append(line.translate({ord(c): None for c in ".!,:;'\/"}))
+    noPunct.append(line.translate({ord(c): None for c in ".!,:;'\/?~+_\"[]{}"}))
 df["reviewText"] = noPunct
 
 train_set, test_set = train_test_split(df.values.tolist(), test_size=0.15, random_state=64)

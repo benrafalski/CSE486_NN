@@ -256,16 +256,19 @@ class BiLSTM_SentimentAnalysis(torch.nn.Module) :
 
         # The LSTM layer takes in the the embedding size and the hidden vector size.
         # The hidden dimension is up to you to decide, but common values are 32, 64, 128
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=num_layers, bidirectional=False, batch_first=True)
+        self.lstm = nn.LSTM(embedding_dim, lstm_units, num_layers=num_layers, bidirectional=False, batch_first=True)
         
+        self.fc1 = nn.Linear(lstm_units, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, 3)
+        self.relu = nn.ReLU()
 
         # We use dropout before the final layer to improve with regularization
         self.dropout = nn.Dropout(dropout)
 
         # The fully-connected layer takes in the hidden dim of the LSTM and
         #  outputs a a 3x1 vector of the class scores.
-        self.fc1 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, 3)
+        # self.fc1 = nn.Linear(hidden_dim, hidden_dim)
+        # self.fc2 = nn.Linear(hidden_dim, 3)
         
 
     def forward(self, x, hidden):
@@ -291,19 +294,25 @@ class BiLSTM_SentimentAnalysis(torch.nn.Module) :
         # drop = self.dropout(dense1)
         # preds = self.fc2(drop)
 
-        out = self.dropout(out)
-        out = torch.nn.functional.relu(self.fc1(out))
-        out = torch.nn.functional.softmax(self.fc2(out), dim=1)        
-        return out, hidden
+        # out = self.dropout(out)
+        # out = torch.nn.functional.relu(self.fc1(out))
+        # out = torch.nn.functional.softmax(self.fc2(out), dim=1)        
+        # return out, hidden
+
+        rel = self.relu(out)
+        dense1 = self.fc1(rel)
+        drop = self.dropout(dense1)
+        preds = self.fc2(drop)
+        return preds, hidden
     
     def init_hidden(self):
         # return (torch.zeros(1, batch_size, 32), torch.zeros(1, batch_size, 32))
-        return (torch.zeros(self.num_layers, batch_size, self.hidden_dim), torch.zeros(self.num_layers, batch_size, self.hidden_dim))
+        return (torch.zeros(self.num_layers, batch_size, self.lstm_units), torch.zeros(self.num_layers, batch_size, self.lstm_units))
 
 
 
 hidden_dim = 256
-embedding_dim = 64
+embedding_dim = 32
 # vocab_size = len(word2index)
 vocab_size = vocab_size + 1
 

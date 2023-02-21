@@ -18,6 +18,8 @@ from collections import Counter
 # from torchtext.vocab import vocab
 # from torchtext.data.utils import get_tokenizer
 nltk.download('punkt')
+nltk.download('stopwords')
+
 from nltk.corpus import stopwords
 stop_words = set(stopwords.words('english'))
 import string
@@ -35,6 +37,18 @@ for line in open('data/Software.json', 'r'):
 df = pd.DataFrame(testdata)
 df = df[["overall", "reviewText"]]
 
+
+testdata2 = []
+i = 0
+for line in open('data/Appliances.json', 'r'):
+  i+=1
+  if i ==10000:
+      break
+  testdata2.append(json.loads(line))
+
+df2 = pd.DataFrame(testdata2)
+df2 = df2[["overall", "reviewText"]]
+
 ##df.columns = ['overall', 'reviewText']
 ##print(df.columns)
 print(df.head())
@@ -44,6 +58,12 @@ df.replace(5.0, 2, inplace=True)
 # df.replace([4.0, 5.0, 1, inplace=True)
 df['reviewText'] = df['reviewText'].apply(lambda x: " ".join(x.lower() for x in str(x).split()))
 
+
+df2.replace([1.0, 2.0, 3.0], "0", inplace=True)
+df2.replace(4.0, "1", inplace=True)
+df2.replace(5.0, "2", inplace=True)
+
+df2['reviewText'] = df2['reviewText'].apply(lambda x: " ".join(x.lower() for x in str(x).split()))
 
 
 def label_map(label):
@@ -209,8 +229,41 @@ def preprocess2():
     # print(len(data))
     # sys.exit()
 
+    df2['cleaned_reviews'] = df2['reviewText'].apply(data_preprocessing)
+    reviews_int2 = []
+    unknowns = []
+    for text in df2['cleaned_reviews']:
+      
+        words = []
+        
+        for word in text.split():
+          try:
+            words.append(vocab_to_int[word])
+            
+          except KeyError:
+            if word not in unknowns:
+              unknowns.append(word)
+            
+        reviews_int2.append(words)
+    print(unknowns)
+    df2['Review int'] = reviews_int2
+
+    review_len2 = [len(x) for x in reviews_int2]
+    df2['Review len'] = review_len2
+
+    features2 = Padding(reviews_int2, 106).tolist()
+    labels2 = []
+    for score in df2['overall']:
+        labels2.append(score)
+
+    data2 = []
+    for i in range(len(features2)):
+        f2 = features2[i]
+        l2 = labels2[i]
+        data2.append((f2, l2)) 
+        
     train_encoded = data[:9000]
-    test_encoded = data[9000:]
+    test_encoded = data2[9000:]
 
     return (train_encoded, test_encoded, len(vocab_to_int))
 
@@ -229,9 +282,10 @@ train_y = np.array([label for tweet, label in train_encoded])
 test_x = np.array([tweet for tweet, label in test_encoded])
 test_y = np.array([label for tweet, label in test_encoded])
 
-
 train_x = train_x.astype(int)
 test_x = test_x.astype(int)
+train_y = train_y.astype(int)
+test_y = test_y.astype(int)
 
 
 train_ds = TensorDataset(torch.from_numpy(train_x), torch.from_numpy(train_y).type(torch.LongTensor))

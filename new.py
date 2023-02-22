@@ -433,3 +433,14 @@ for batch_idx, batch in enumerate(test_dl):
 sum(batch_acc)/len(batch_acc)
 
 print(sum(batch_acc)/len(batch_acc))
+
+
+print('saving model...')
+PATH = "models/rnn.pth"
+
+state = {
+    'epoch': epochs,
+    'state_dict': model.state_dict(),
+    'optimizer': optimizer.state_dict(),
+}
+torch.save(state, PATH)

@@ -18,6 +18,7 @@ from collections import Counter
 # from torchtext.vocab import vocab
 # from torchtext.data.utils import get_tokenizer
 from nltk.stem import WordNetLemmatizer
+import jamspell
 
 nltk.download('wordnet')
 nltk.download('omw-1.4')
@@ -28,7 +29,8 @@ from nltk.corpus import stopwords
 stop_words = set(stopwords.words('english'))
 import string
 
-
+corrector = jamspell.TSpellCorrector()
+corrector.LoadLangModel('data/en.bin')
 
 testdata = []
 i = 0
@@ -156,6 +158,7 @@ def preprocess1():
 def data_preprocessing(text):
     text = text.lower()
     text = re.sub('<.*?>', '', text) # Remove HTML from text
+    text = corrector.FixFragment(text) #fixes spelling
     text = ''.join([c for c in text if c not in string.punctuation])# Remove punctuation
     text = [word for word in text.split() if word not in stop_words]
     text = [lemmatizer.lemmatize(word) for word in text if len(text)>1]

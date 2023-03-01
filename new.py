@@ -196,6 +196,77 @@ def preprocess2():
     # # plt.plotsize(100, 15)
     # plt.show()
 
+
+    #different type of encoding that might work better after we get new dataset
+    #pos_counts = Counter()
+    #neg_counts = Counter()
+    #total_counts = Counter()
+
+    #labels = []
+    #for score in df['overall']:
+    #    labels.append(score)
+    #listCopy = list(df['cleaned_reviews'])
+    #for i in range(len(listCopy)):
+    #  if (labels[i] == "2"):
+    #    for word in listCopy[i].split():
+    #      pos_counts[word] += 1
+    #      total_counts[word] += 1
+    #  elif (labels[i] == "1"):
+    #    for word in listCopy[i].split():
+    #      pos_counts[word] += 0
+    #      neg_counts[word] += 0
+    #      total_counts[word] += 1
+    #  elif (labels[i] == "0"):
+    #    for word in listCopy[i].split():
+    #      neg_counts[word] += 1
+    #      total_counts[word] += 1
+    #pos_neg_ratios = Counter()
+
+    #for word, count in list(total_counts.most_common()):
+    #  if (count >= 10):
+    #    ratio = pos_counts[word] / float(neg_counts[word] + 1)
+    #    pos_neg_ratios[word] = ratio
+
+    #for word, ratio in pos_neg_ratios.most_common():
+    #  if (ratio > 1):
+    #    pos_neg_ratios[word] = np.log(ratio)
+    #  else:
+    #    pos_neg_ratios[word] = -np.log((1 / (ratio + 0.01)))
+
+    #new_words = set()
+    #for line in listCopy:
+    #  for word in line.split():
+    #    if (total_counts[word] > 10):
+    #         if (word in pos_neg_ratios.keys()):
+    #            if ((pos_neg_ratios[word] >= 0.05) or (pos_neg_ratios[word] <= -0.05)):
+    #                new_words.add(word)
+    #         else:
+    #            new_words.add(word)
+
+    #listNew = list(new_words)
+    ## print(listNew[0])
+    ## #print(df.head())
+
+    #word2index = {}
+    #for i, word in enumerate(listNew):
+    #  word2index[word] = i
+
+    #ignoring = set()
+    #reviews_int = []
+    #for text in df['cleaned_reviews']:
+    #    textLine = []
+    #    for word in text.split():
+    #      try:
+    #        textLine.append(word2index[word])
+    #      except KeyError:
+    #        ignoring.add(word)
+    #    r = textLine
+    #    reviews_int.append(r)
+
+
+
+
+
     vocab_to_int = {w:i+1 for i, (w,c) in enumerate(sorted_words)}
 
     reviews_int = []

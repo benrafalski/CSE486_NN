@@ -17,6 +17,10 @@ import json
 from collections import Counter
 # from torchtext.vocab import vocab
 # from torchtext.data.utils import get_tokenizer
+from nltk.stem import WordNetLemmatizer
+
+nltk.download('wordnet')
+nltk.download('omw-1.4')
 nltk.download('punkt')
 nltk.download('stopwords')
 
@@ -154,6 +158,7 @@ def data_preprocessing(text):
     text = re.sub('<.*?>', '', text) # Remove HTML from text
     text = ''.join([c for c in text if c not in string.punctuation])# Remove punctuation
     text = [word for word in text.split() if word not in stop_words]
+    text = [lemmatizer.lemmatize(word) for word in text if len(text)>1]
     text = ' '.join(text)
     return text
 
@@ -378,7 +383,7 @@ lr = 0.005
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-epochs = 100
+epochs = 15
 losses = []
 
 for e in range(epochs):

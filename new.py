@@ -1,5 +1,7 @@
 from ast import Try
+import random
 import sys
+import time
 from unicodedata import bidirectional
 import torch
 import torch.nn as nn
@@ -31,29 +33,61 @@ import string
 
 corrector = jamspell.TSpellCorrector()
 corrector.LoadLangModel('data/en.bin')
+lemmatizer = WordNetLemmatizer()
 
-testdata = []
-i = 0
-for line in open('data/Software.json', 'r'):
-  i+=1
-  if i ==10000:
-      break
-  testdata.append(json.loads(line))
+
+# data_size  test_acc   train_acc   epochs        
+# 10000      0.633      0.968       15
+# 20000      0.651      0.966       15
+# 50000      0.682      0.950       20
+# 100000     0.680      0.914       20   
+
+DATA_SIZE = 100000
+
+def load_json(filename):
+    testdata = []
+    i = 0
+    for line in open(filename, 'r'):
+        i+=1
+        if i == DATA_SIZE // 4:
+            break
+        testdata.append(json.loads(line))
+    return testdata
+
+
+# load_json(filename='data/Software.json')
+
+software = load_json(filename='data/Software.json')
+electronic = load_json(filename='data/Electronics.json')
+appliance = load_json(filename='data/Appliances.json')
+video_games = load_json(filename='data/Video_Games.json')
+
+testdata = software + electronic + appliance + video_games
 
 df = pd.DataFrame(testdata)
 df = df[["overall", "reviewText"]]
+# testdata = []
+# i = 0
+# for line in open('data/Software.json', 'r'):
+#   i+=1
+# #   if i ==10000:
+# #       break
+#   testdata.append(json.loads(line))
+
+# df = pd.DataFrame(testdata)
+# df = df[["overall", "reviewText"]]
 
 
-testdata2 = []
-i = 0
-for line in open('data/Appliances.json', 'r'):
-  i+=1
-  if i ==10000:
-      break
-  testdata2.append(json.loads(line))
+# testdata2 = []
+# i = 0
+# for line in open('data/Appliances.json', 'r'):
+#   i+=1
+# #   if i ==10000:
+# #       break
+#   testdata.append(json.loads(line))
 
-df2 = pd.DataFrame(testdata2)
-df2 = df2[["overall", "reviewText"]]
+# df2 = pd.DataFrame(testdata)
+# df2 = df2[["overall", "reviewText"]]
 
 ##df.columns = ['overall', 'reviewText']
 ##print(df.columns)
@@ -65,11 +99,11 @@ df.replace(5.0, 2, inplace=True)
 df['reviewText'] = df['reviewText'].apply(lambda x: " ".join(x.lower() for x in str(x).split()))
 
 
-df2.replace([1.0, 2.0, 3.0], "0", inplace=True)
-df2.replace(4.0, "1", inplace=True)
-df2.replace(5.0, "2", inplace=True)
+# df2.replace([1.0, 2.0, 3.0], "0", inplace=True)
+# df2.replace(4.0, "1", inplace=True)
+# df2.replace(5.0, "2", inplace=True)
 
-df2['reviewText'] = df2['reviewText'].apply(lambda x: " ".join(x.lower() for x in str(x).split()))
+# df2['reviewText'] = df2['reviewText'].apply(lambda x: " ".join(x.lower() for x in str(x).split()))
 
 
 def label_map(label):
@@ -181,6 +215,7 @@ def Padding(review_int, seq_len):
     return features
 
 def preprocess2():
+    print("Applying preprocessing...")
     df['cleaned_reviews'] = df['reviewText'].apply(data_preprocessing)
     corpus = [word for text in df['cleaned_reviews'] for word in text.split()]
     count_words = Counter(corpus)
@@ -272,17 +307,18 @@ def preprocess2():
 
     vocab_to_int = {w:i+1 for i, (w,c) in enumerate(sorted_words)}
 
+    print("Applying vocab to int...")
     reviews_int = []
     for text in df['cleaned_reviews']:
         r = [vocab_to_int[word] for word in text.split()]
         reviews_int.append(r)
 
-    print(reviews_int[:1])
+    # print(reviews_int[:1])
     df['Review int'] = reviews_int
 
     review_len = [len(x) for x in reviews_int]
     df['Review len'] = review_len
-    print(df.head())
+    # print(df.head())
 
 
 
@@ -308,49 +344,56 @@ def preprocess2():
     # print(len(data))
     # sys.exit()
 
-    df2['cleaned_reviews'] = df2['reviewText'].apply(data_preprocessing)
-    reviews_int2 = []
-    unknowns = []
-    for text in df2['cleaned_reviews']:
+    # df2['cleaned_reviews'] = df2['reviewText'].apply(data_preprocessing)
+    # reviews_int2 = []
+    # unknowns = []
+    # for text in df2['cleaned_reviews']:
       
-        words = []
+    #     words = []
         
-        for word in text.split():
-          try:
-            words.append(vocab_to_int[word])
+    #     for word in text.split():
+    #       try:
+    #         words.append(vocab_to_int[word])
             
-          except KeyError:
-            if word not in unknowns:
-              unknowns.append(word)
+    #       except KeyError:
+    #         if word not in unknowns:
+    #           unknowns.append(word)
             
-        reviews_int2.append(words)
-    print(unknowns)
-    df2['Review int'] = reviews_int2
+    #     reviews_int2.append(words)
+    # # print(unknowns)
+    # df2['Review int'] = reviews_int2
 
-    review_len2 = [len(x) for x in reviews_int2]
-    df2['Review len'] = review_len2
+    # review_len2 = [len(x) for x in reviews_int2]
+    # df2['Review len'] = review_len2
 
-    features2 = Padding(reviews_int2, 106).tolist()
-    labels2 = []
-    for score in df2['overall']:
-        labels2.append(score)
+    # features2 = Padding(reviews_int2, 106).tolist()
+    # labels2 = []
+    # for score in df2['overall']:
+    #     labels2.append(score)
 
-    data2 = []
-    for i in range(len(features2)):
-        f2 = features2[i]
-        l2 = labels2[i]
-        data2.append((f2, l2)) 
+    # data2 = []
+    # for i in range(len(features2)):
+    #     f2 = features2[i]
+    #     l2 = labels2[i]
+    #     data2.append((f2, l2)) 
+
+
+    random.shuffle(data)
         
-    train_encoded = data[:9000]
-    test_encoded = data2[9000:]
+        
+    train_encoded = data[:int(DATA_SIZE*0.90)]
+    test_encoded = data[int(DATA_SIZE*0.90):]
+    print(len(train_encoded))
+    print(len(test_encoded))
 
     return (train_encoded, test_encoded, len(vocab_to_int))
 
 
 
-
+pre_start = time.time()
 train_encoded, test_encoded, vocab_size = preprocess2()
-
+pre_end = time.time()
+print(f'Preprocessing took : {pre_end-pre_start} s')
 
 # sys.exit()
 
@@ -450,6 +493,7 @@ embedding_dim = 32
 vocab_size = vocab_size + 1
 
 model = BiLSTM_SentimentAnalysis(vocab_size, embedding_dim, hidden_dim, 64, 3, 0.2)
+# model = torch.load("models/rnn.pth")
 
 # 3e-4
 lr = 0.005
@@ -457,7 +501,7 @@ lr = 0.005
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-epochs = 15
+epochs = 30
 losses = []
 
 for e in range(epochs):
@@ -515,11 +559,11 @@ print(sum(batch_acc)/len(batch_acc))
 
 
 print('saving model...')
-PATH = "models/rnn.pth"
+PATH = f"models/rnn_{DATA_SIZE}.pth"
 
-state = {
-    'epoch': epochs,
-    'state_dict': model.state_dict(),
-    'optimizer': optimizer.state_dict(),
-}
-torch.save(state, PATH)
+# state = {
+#     'epoch': epochs,
+#     'state_dict': model.state_dict(),
+#     'optimizer': optimizer.state_dict(),
+# }
+torch.save(model, PATH)

@@ -40,9 +40,10 @@ lemmatizer = WordNetLemmatizer()
 # 10000      0.633      0.968       15
 # 20000      0.651      0.966       15
 # 50000      0.682      0.950       20
-# 100000     0.680      0.914       20   
+# 100000     0.693      0.925       30 
+# 250000     0.713      0.885       50 
 
-DATA_SIZE = 100000
+DATA_SIZE = 250000
 
 def load_json(filename):
     testdata = []
@@ -501,7 +502,7 @@ lr = 0.005
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-epochs = 30
+epochs = 50
 losses = []
 
 for e in range(epochs):
@@ -515,7 +516,7 @@ for e in range(epochs):
 
     for batch_idx, batch in enumerate(train_dl):
 
-        if batch_idx % 100 == 0:
+        if batch_idx % 1000 == 0:
             print(f'\tstarting batch number {batch_idx} of {len(train_dl)}')
 
         input = batch[0]

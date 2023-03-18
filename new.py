@@ -43,7 +43,7 @@ lemmatizer = WordNetLemmatizer()
 # 100000     0.693      0.925       30 
 # 250000     0.713      0.885       50 
 
-DATA_SIZE = 250000
+DATA_SIZE = 1000
 
 def load_json(filename):
     testdata = []
@@ -327,6 +327,7 @@ def preprocess2():
     features = Padding(reviews_int, 106).tolist()
     labels = []
     for score in df['overall']:
+        # print(score)
         labels.append(score)
 
     # print(features[0])
@@ -502,14 +503,14 @@ lr = 0.005
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-epochs = 50
+epochs = 1
 losses = []
 
 for e in range(epochs):
     batch_acc = []
     print(f'epoch {e+1}')
 
-    h0, c0 =  model.init_hidden()
+    h0, c0 = model.init_hidden()
 
     h0 = h0
     c0 = c0
@@ -546,6 +547,10 @@ for batch_idx, batch in enumerate(test_dl):
 
     input = batch[0]
     target = batch[1]
+
+    print(batch)
+    print(h0)
+    print(c0)
 
     optimizer.zero_grad()
     with torch.set_grad_enabled(False):

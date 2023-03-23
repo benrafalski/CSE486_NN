@@ -189,12 +189,23 @@ def preprocess1():
 
     return (train_encoded, test_encoded)
 
+more_stop_words = {"would", "get", "game", "product", "software", "also", "got", "thing",
+                    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+                    "version", "may", "although", "mine", "must", "neither", "became", 
+                   "become", "oh", "whereas", "could", "whether", "either", "story", "program",
+                   "else", "first", "next", "say", "lot", "go", "paper", "book", "manual", "im",
+                   "youll", "youve", "ill", "youre", "theyre", "hes", "shes", "ive", "new", "old", 
+                   "card", "computer", "use", "install", "made", "think", "back", "many", "used"
+                  }
+stop_words.update(more_stop_words)
+stop_words.discard("not")
+stop_words.discard("no")
 
 def data_preprocessing(text):
     text = text.lower()
     text = re.sub('<.*?>', '', text) # Remove HTML from text
     text = corrector.FixFragment(text) #fixes spelling
-    text = ''.join([c for c in text if c not in string.punctuation])# Remove punctuation
+    text = ''.join([c for c in text if c not in string.punctuation and c not in string.digits])# Remove punctuation
     text = [word for word in text.split() if word not in stop_words]
     text = [lemmatizer.lemmatize(word) for word in text if len(text)>1]
     text = ' '.join(text)

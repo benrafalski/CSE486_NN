@@ -21,6 +21,7 @@ from collections import Counter
 # from torchtext.data.utils import get_tokenizer
 from nltk.stem import WordNetLemmatizer
 import jamspell
+import pickle
 
 nltk.download('wordnet')
 nltk.download('omw-1.4')
@@ -43,7 +44,7 @@ lemmatizer = WordNetLemmatizer()
 # 100000     0.693      0.925       30 
 # 250000     0.713      0.885       50 
 
-DATA_SIZE = 1000
+DATA_SIZE = 12000
 
 def load_json(filename):
     testdata = []
@@ -405,6 +406,8 @@ def preprocess2():
 
 pre_start = time.time()
 train_encoded, test_encoded, vocab_size = preprocess2()
+print(f"vocab size = {vocab_size}")
+
 pre_end = time.time()
 print(f'Preprocessing took : {pre_end-pre_start} s')
 
@@ -506,15 +509,40 @@ embedding_dim = 32
 vocab_size = vocab_size + 1
 
 model = BiLSTM_SentimentAnalysis(vocab_size, embedding_dim, hidden_dim, 64, 3, 0.2)
-# model = torch.load("models/rnn.pth")
+# model = torch.load("models/rnn_10000.pth")
+lr = 0.005
+optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+# model.eval()
+# batch_acc = []
+# for batch_idx, batch in enumerate(test_dl):
+
+#     input = batch[0]
+#     target = batch[1]
+
+#     # print(batch)
+#     # print(h0)
+#     # print(c0)
+#     h0, c0 = model.init_hidden()
+
+#     optimizer.zero_grad()
+#     with torch.set_grad_enabled(False):
+#         out, hidden = model(input, (h0, c0))
+#         _, preds = torch.max(out, 1)
+#         preds = preds.to("cpu").tolist()
+#         batch_acc.append(accuracy_score(preds, target.tolist()))
+
+# sum(batch_acc)/len(batch_acc)
+
+# print(sum(batch_acc)/len(batch_acc))
+# sys.exit(0)
 
 # 3e-4
-lr = 0.005
+
 
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+# optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-epochs = 1
+epochs = 15
 losses = []
 
 for e in range(epochs):
@@ -554,14 +582,16 @@ for e in range(epochs):
     losses.append(loss.item())
 
 batch_acc = []
+# print(f'h0 = {h0}')
+# print(f'c0 = {c0}')
 for batch_idx, batch in enumerate(test_dl):
 
     input = batch[0]
     target = batch[1]
 
-    print(batch)
-    print(h0)
-    print(c0)
+    # print(batch)
+    
+    # h0, c0 = model.init_hidden()
 
     optimizer.zero_grad()
     with torch.set_grad_enabled(False):

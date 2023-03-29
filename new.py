@@ -14,11 +14,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import nltk
 from nltk.tokenize import word_tokenize
-#import matplotlib.pyplot as plt
 import json
 from collections import Counter
-# from torchtext.vocab import vocab
-# from torchtext.data.utils import get_tokenizer
 from nltk.stem import WordNetLemmatizer
 import jamspell
 import pickle
@@ -36,7 +33,7 @@ corrector = jamspell.TSpellCorrector()
 corrector.LoadLangModel('data/en.bin')
 lemmatizer = WordNetLemmatizer()
 
-
+# these are just some notes about the runtimes and accuracies we got
 # data_size  test_acc   train_acc   epochs        
 # 10000      0.633      0.968       15
 # 20000      0.651      0.966       15
@@ -44,8 +41,15 @@ lemmatizer = WordNetLemmatizer()
 # 100000     0.693      0.925       30 
 # 250000     0.713      0.885       50 
 
-DATA_SIZE = 12000
+# these are the hyper parameters that need to be defined
+DATA_SIZE = 12000 # amount of data
+batch_size = 32 # how many records for each batch
+hidden_dim = 256 # size of the hidden dimension of embedding layer
+embedding_dim = 32 # size of embedding dim of embedding layer
+lr = 0.005 # learing rate 
+epochs = 15 # number of rounds used to train
 
+# function to load json data into a list
 def load_json(filename):
     testdata = []
     i = 0
@@ -56,58 +60,28 @@ def load_json(filename):
         testdata.append(json.loads(line))
     return testdata
 
-
-# load_json(filename='data/Software.json')
-
+# load the data for each category 
 software = load_json(filename='data/Software.json')
 electronic = load_json(filename='data/Electronics.json')
 appliance = load_json(filename='data/Appliances.json')
 video_games = load_json(filename='data/Video_Games.json')
-
+# combine the data into a single list
 testdata = software + electronic + appliance + video_games
-
+# convert the list to a panda dataframe for preprocessing
 df = pd.DataFrame(testdata)
 df = df[["overall", "reviewText"]]
-# testdata = []
-# i = 0
-# for line in open('data/Software.json', 'r'):
-#   i+=1
-# #   if i ==10000:
-# #       break
-#   testdata.append(json.loads(line))
 
-# df = pd.DataFrame(testdata)
-# df = df[["overall", "reviewText"]]
-
-
-# testdata2 = []
-# i = 0
-# for line in open('data/Appliances.json', 'r'):
-#   i+=1
-# #   if i ==10000:
-# #       break
-#   testdata.append(json.loads(line))
-
-# df2 = pd.DataFrame(testdata)
-# df2 = df2[["overall", "reviewText"]]
-
-##df.columns = ['overall', 'reviewText']
-##print(df.columns)
-print(df.head())
+# edit labels
+# rating (1,2,3) -> 0
+# rating 4 -> 1
+# rating 5 -> 2
 df.replace([1.0, 2.0, 3.0], 0, inplace=True)
 df.replace(4.0, 1, inplace=True)
 df.replace(5.0, 2, inplace=True)
-# df.replace([4.0, 5.0, 1, inplace=True)
+# convert everything to lowercase
 df['reviewText'] = df['reviewText'].apply(lambda x: " ".join(x.lower() for x in str(x).split()))
 
-
-# df2.replace([1.0, 2.0, 3.0], "0", inplace=True)
-# df2.replace(4.0, "1", inplace=True)
-# df2.replace(5.0, "2", inplace=True)
-
-# df2['reviewText'] = df2['reviewText'].apply(lambda x: " ".join(x.lower() for x in str(x).split()))
-
-
+# function to convert label from string to int
 def label_map(label):
     if label == "0":
         return 0
@@ -119,6 +93,8 @@ def label_map(label):
 index2word = ["<PAD>", "<SOS>", "<EOS>", "<UNK>"]
 word2index = {token: idx for idx, token in enumerate(index2word)}
 
+# covnerts words to int and adds padding
+# used in legacy preprocessing
 def encode_and_pad(tweet, length):
     sos = [word2index["<SOS>"]]
     eos = [word2index["<EOS>"]]
@@ -127,9 +103,7 @@ def encode_and_pad(tweet, length):
     if len(tweet) < length - 2: # -2 for SOS and EOS
         n_pads = length - 2 - len(tweet)
         #encoded = [word2index[w] for w in tweet]
-
         encoded = []
-        
         for w in tweet:
             try:
                 encoded.append(word2index[w])
@@ -139,8 +113,6 @@ def encode_and_pad(tweet, length):
                     encoded.append(word2index["<UNK>"])
                     print("word not recognized: " + w)
         sos.extend(encoded)
-        # print(sos +  eos + pad * n_pads )
-        # sys.exit()
         return pad * n_pads + sos +  eos 
     else: # tweet is longer than possible; truncating
         #encoded = [word2index[w] for w in tweet]
@@ -158,8 +130,8 @@ def encode_and_pad(tweet, length):
         sos.extend(truncated)
         return sos   + eos
 
-
-
+# legacy preprocessing
+# don't worry about this one
 def preprocess1():
     noPunct = []
     for line in df["reviewText"]:
@@ -169,19 +141,11 @@ def preprocess1():
     train_set, test_set = train_test_split(df.values.tolist(), test_size=0.15, random_state=64)
     train_df, valid_df = train_test_split(df.values.tolist(), test_size=0.15, random_state=64)
 
-
-
-    
-
-
     for ds in [train_set, test_set]:
         for label, tweet in ds:
             for token in tweet:
                 if token not in index2word:
                     index2word.append(token)
-
-
-    
 
     seq_length = 106
     train_encoded = [(encode_and_pad(tweet, seq_length), label) for label, tweet in train_set]
@@ -190,6 +154,7 @@ def preprocess1():
 
     return (train_encoded, test_encoded)
 
+# Delena added these new stopwords
 more_stop_words = {"would", "get", "game", "product", "software", "also", "got", "thing",
                     "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
                     "version", "may", "although", "mine", "must", "neither", "became", 
@@ -198,20 +163,24 @@ more_stop_words = {"would", "get", "game", "product", "software", "also", "got",
                    "youll", "youve", "ill", "youre", "theyre", "hes", "shes", "ive", "new", "old", 
                    "card", "computer", "use", "install", "made", "think", "back", "many", "used"
                   }
+# add the new stopwords and remove 'not' and 'no'
 stop_words.update(more_stop_words)
 stop_words.discard("not")
 stop_words.discard("no")
 
+# preprocessing function
+# does various operations on the comments
 def data_preprocessing(text):
     text = text.lower()
     text = re.sub('<.*?>', '', text) # Remove HTML from text
     text = corrector.FixFragment(text) #fixes spelling
     text = ''.join([c for c in text if c not in string.punctuation and c not in string.digits])# Remove punctuation
-    text = [word for word in text.split() if word not in stop_words]
-    text = [lemmatizer.lemmatize(word) for word in text if len(text)>1]
+    text = [word for word in text.split() if word not in stop_words] # remove stopwords
+    text = [lemmatizer.lemmatize(word) for word in text if len(text)>1] # lemmatize
     text = ' '.join(text)
     return text
 
+# function to pad each sequence
 def Padding(review_int, seq_len):
     '''
     Return features of review_ints, where each review is padded with 0's or truncated to the input seq_length.
@@ -227,8 +196,10 @@ def Padding(review_int, seq_len):
             
     return features
 
+# real preprocessing function currently being used
 def preprocess2():
     print("Applying preprocessing...")
+    # clean the reviews
     df['cleaned_reviews'] = df['reviewText'].apply(data_preprocessing)
     corpus = [word for text in df['cleaned_reviews'] for word in text.split()]
     count_words = Counter(corpus)
@@ -241,12 +212,7 @@ def preprocess2():
         keys.append(key)
         values.append(value)
 
-    # plt.plot()
-    # plt.bar(keys, values)
-    # plt.theme('matrix')
-    # # plt.plotsize(100, 15)
-    # plt.show()
-
+    # this is old code that may be useful later
 
     #different type of encoding that might work better after we get new dataset
     #pos_counts = Counter()
@@ -315,37 +281,27 @@ def preprocess2():
     #    reviews_int.append(r)
 
 
-
-
-
+    # convert word to integer mapping
     vocab_to_int = {w:i+1 for i, (w,c) in enumerate(sorted_words)}
 
+    # obtain integer reviews
     print("Applying vocab to int...")
     reviews_int = []
     for text in df['cleaned_reviews']:
         r = [vocab_to_int[word] for word in text.split()]
         reviews_int.append(r)
 
-    # print(reviews_int[:1])
     df['Review int'] = reviews_int
-
     review_len = [len(x) for x in reviews_int]
     df['Review len'] = review_len
-    # print(df.head())
 
-
-
-
+    # split data into features and labels
     features = Padding(reviews_int, 106).tolist()
     labels = []
     for score in df['overall']:
-        # print(score)
         labels.append(score)
 
-    # print(features[0])
-    # print(labels)
-
-
+    # combine features and labels into a tuple
     data = []
     for i in range(len(features)):
         f = features[i]
@@ -391,50 +347,42 @@ def preprocess2():
     #     l2 = labels2[i]
     #     data2.append((f2, l2)) 
 
-
-    random.shuffle(data)
-        
-        
+    # shuffle the data each run
+    random.shuffle(data)  
+    # train = 90% of the records
+    # test = 10% of the records
     train_encoded = data[:int(DATA_SIZE*0.90)]
     test_encoded = data[int(DATA_SIZE*0.90):]
-    print(len(train_encoded))
-    print(len(test_encoded))
 
+    # return (training data, testing data, vocab length)
     return (train_encoded, test_encoded, len(vocab_to_int))
 
 
-
+# preprocess the data here
 pre_start = time.time()
 train_encoded, test_encoded, vocab_size = preprocess2()
 print(f"vocab size = {vocab_size}")
-
 pre_end = time.time()
 print(f'Preprocessing took : {pre_end-pre_start} s')
 
-# sys.exit()
-
-batch_size = 32
-
+# get the training and testing labels here
 train_x = np.array([tweet for tweet, label in train_encoded])
 train_y = np.array([label for tweet, label in train_encoded])
 test_x = np.array([tweet for tweet, label in test_encoded])
 test_y = np.array([label for tweet, label in test_encoded])
-
 train_x = train_x.astype(int)
 test_x = test_x.astype(int)
 train_y = train_y.astype(int)
 test_y = test_y.astype(int)
 
-
+# convert the training and testing data into a PyTorch Dataset
 train_ds = TensorDataset(torch.from_numpy(train_x), torch.from_numpy(train_y).type(torch.LongTensor))
 test_ds = TensorDataset(torch.from_numpy(test_x), torch.from_numpy(test_y).type(torch.LongTensor))
-
+# now we can convert the Dataset into a PyTorch DataLoader
 train_dl = DataLoader(train_ds, shuffle=True, batch_size=batch_size, drop_last=True)
 test_dl = DataLoader(test_ds, shuffle=True, batch_size=batch_size, drop_last=True)
 
-print(len(train_dl))
-
-
+# this is the defenition of the model we are using
 class BiLSTM_SentimentAnalysis(torch.nn.Module) :
     def __init__(self, vocab_size, embedding_dim, hidden_dim, lstm_units, num_layers, dropout) :
         super().__init__()
@@ -502,16 +450,14 @@ class BiLSTM_SentimentAnalysis(torch.nn.Module) :
         return (torch.zeros(self.num_layers, batch_size, self.lstm_units), torch.zeros(self.num_layers, batch_size, self.lstm_units))
 
 
-
-hidden_dim = 256
-embedding_dim = 32
-# vocab_size = len(word2index)
 vocab_size = vocab_size + 1
-
+# define the model like below if you are training a new model
 model = BiLSTM_SentimentAnalysis(vocab_size, embedding_dim, hidden_dim, 64, 3, 0.2)
+# define the model like below if you want to load an existing model
 # model = torch.load("models/rnn_10000.pth")
-lr = 0.005
+# optimizer to update the weights and biases
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+# this commented out part pretty much just tests using a loaded model and exits
 # model.eval()
 # batch_acc = []
 # for batch_idx, batch in enumerate(test_dl):
@@ -536,63 +482,58 @@ optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 # print(sum(batch_acc)/len(batch_acc))
 # sys.exit(0)
 
-# 3e-4
 
-
+# define a loss function
 criterion = nn.CrossEntropyLoss()
-# optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-
-epochs = 15
 losses = []
 
+# this is the training loop
 for e in range(epochs):
     batch_acc = []
     print(f'epoch {e+1}')
 
+    # init the hidden layers of the model here
     h0, c0 = model.init_hidden()
 
     h0 = h0
     c0 = c0
 
+    # run each batch from the training dataset
     for batch_idx, batch in enumerate(train_dl):
 
         if batch_idx % 1000 == 0:
             print(f'\tstarting batch number {batch_idx} of {len(train_dl)}')
 
+        # split the features and labels
         input = batch[0]
         target = batch[1]
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
+            # do the forward pass
             out, hidden = model(input, (h0, c0))
+            # compute the loss
             loss = criterion(out, target)
+            # do the backward propogation
             loss.backward()
-            # nn.utils.clip_grad_norm_(model.parameters(), 5)
+            # updates the weights and biases
             optimizer.step()
-
+            # compute the batch accuracy
             _, preds = torch.max(out, 1)
             preds = preds.to("cpu").tolist()
             batch_acc.append(accuracy_score(preds, target.tolist()))
 
         
     print(f'epoch accracy = {sum(batch_acc)/len(batch_acc)}')
-
-
-
     losses.append(loss.item())
 
+# after training we test on the testing dataset
+# notice there is no backward propogation or updating of the weights
 batch_acc = []
-# print(f'h0 = {h0}')
-# print(f'c0 = {c0}')
 for batch_idx, batch in enumerate(test_dl):
 
     input = batch[0]
     target = batch[1]
-
-    # print(batch)
-    
-    # h0, c0 = model.init_hidden()
-
     optimizer.zero_grad()
     with torch.set_grad_enabled(False):
         out, hidden = model(input, (h0, c0))
@@ -601,13 +542,11 @@ for batch_idx, batch in enumerate(test_dl):
         batch_acc.append(accuracy_score(preds, target.tolist()))
 
 sum(batch_acc)/len(batch_acc)
-
 print(sum(batch_acc)/len(batch_acc))
 
-
+# save the model to the PATH defined
 print('saving model...')
 PATH = f"models/rnn_{DATA_SIZE}.pth"
-
 # state = {
 #     'epoch': epochs,
 #     'state_dict': model.state_dict(),

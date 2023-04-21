@@ -254,9 +254,68 @@ def preprocess2():
     return (train_encoded, test_encoded, len(vocab_to_int))
 
 
+
+newVocab = pd.read_pickle("data/preprocessed.pkl")
+def preprocess4():
+    print("Applying preprocessing...")
+    # clean the reviews
+    #df['cleaned_reviews'] = df['reviewText'].apply(data_preprocessing)
+
+    #following are combining old processed vocab with new vocab set that has also already been processed
+    #if they have not been processed use data_preprocessing function
+    df3 = pd.read_pickle("data/preprocessed3.pkl") #100k records after first 100k records
+    oldVocab = pd.read_pickle("data/preprocessed.pkl") #first 100k records
+    newVocab = oldVocab.append(df3, ignore_index=True)
+    
+    corpus = [word for text in newVocab['cleaned_reviews'] for word in text.split()]
+    count_words = Counter(corpus)
+    sorted_words = count_words.most_common()
+
+
+    # convert word to integer mapping
+    vocab_to_int = {w:i+1 for i, (w,c) in enumerate(sorted_words)}
+
+    # obtain integer reviews
+    print("Applying vocab to int...")
+    reviews_int = []
+    for text in newVocab['cleaned_reviews']:
+        r = [vocab_to_int[word] for word in text.split()]
+        reviews_int.append(r)
+
+    newVocab['Review int'] = reviews_int
+    review_len = [len(x) for x in reviews_int]
+    newVocab['Review len'] = review_len
+
+    # split data into features and labels
+    features = Padding(reviews_int, 106).tolist()
+    labels = []
+    for score in newVocab['overall']:
+        labels.append(score)
+
+    # combine features and labels into a tuple
+    data = []
+    for i in range(len(features)):
+        f = features[i]
+        l = labels[i]
+        data.append((f, l))
+
+  
+    # shuffle the data each run
+    #random.shuffle(data)  
+    # train = 90% of the records
+    # test = 10% of the records
+    train_encoded = data[:int(DATA_SIZE*0.80)]
+    test_encoded = data[int(DATA_SIZE*0.80):]
+
+    return (train_encoded, test_encoded, len(vocab_to_int))
+
 # preprocess the data here
 pre_start = time.time()
-train_encoded, test_encoded, vocab_size = preprocess2()
+train_encoded, test_encoded, vocab_size = preprocess2() 
+
+#use this instead of you want to add new data to train along with previous data
+#train_encoded, test_encoded, vocab_size = preprocess4()
+
 print(f"vocab size = {vocab_size}")
 pre_end = time.time()
 print(f'Preprocessing took : {pre_end-pre_start} s')
@@ -330,7 +389,8 @@ class BiLSTM_SentimentAnalysis(torch.nn.Module) :
         # return (torch.zeros(1, batch_size, 32), torch.zeros(1, batch_size, 32))
         return (torch.zeros(self.num_layers, batch_size, self.lstm_units), torch.zeros(self.num_layers, batch_size, self.lstm_units))
 
-
+    def init_hidden_import(self, hidden):
+        return hidden
 vocab_size = vocab_size + 1
 # define the model like below if you are training a new model
 model = BiLSTM_SentimentAnalysis(vocab_size, embedding_dim, hidden_dim, 64, 3, 0.2, 5)
@@ -368,6 +428,13 @@ optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 criterion = nn.CrossEntropyLoss()
 losses = []
 
+
+last_hidden = (torch.zeros(3, batch_size, 64), torch.zeros(3, batch_size, 64))
+
+#use this to load in previously used hidden text
+#with open("data/hidden.txt", 'rb') as f:
+ # last_hidden = pickle.load("data/hidden.txt")
+
 # this is the training loop
 for e in range(epochs):
     batch_acc = []
@@ -375,7 +442,7 @@ for e in range(epochs):
 
     # init the hidden layers of the model here
     h0, c0 = model.init_hidden()
-
+    #h0, c0 = model.init_hidden_import(last_hidden)
     h0 = h0
     c0 = c0
 
@@ -393,6 +460,8 @@ for e in range(epochs):
         with torch.set_grad_enabled(True):
             # do the forward pass
             out, hidden = model(input, (h0, c0))
+            lastHidden = hidden
+
             # compute the loss
             loss = criterion(out, target)
             # do the backward propogation
@@ -408,6 +477,9 @@ for e in range(epochs):
     print(f'epoch accracy = {sum(batch_acc)/len(batch_acc)}')
     losses.append(loss.item())
 
+    #save hidden data
+    with open("data/hidden.txt", 'wb') as f:
+      pickle.dump(last_hidden, f)
 # after training we test on the testing dataset
 # notice there is no backward propogation or updating of the weights
 batch_acc = []

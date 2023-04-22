@@ -65,6 +65,9 @@ test_loader = DataLoader(test_data,batch_size=batch_size)
 
 model = XLNetForSequenceClassification.from_pretrained("xlnet-base-cased", num_labels=5)
 
+
+print(model)
+
 optimizer = torch.optim.AdamW(model.parameters(),lr=2e-5)# We pass model parameters
 criterion = nn.CrossEntropyLoss()
 

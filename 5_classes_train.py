@@ -33,13 +33,7 @@ corrector = jamspell.TSpellCorrector()
 corrector.LoadLangModel('data/en.bin')
 lemmatizer = WordNetLemmatizer()
 
-# these are just some notes about the runtimes and accuracies we got
-# data_size  test_acc   train_acc   epochs        
-# 10000      0.633      0.968       15
-# 20000      0.651      0.966       15
-# 50000      0.682      0.950       20
-# 100000     0.693      0.925       30 
-# 250000     0.713      0.885       50 
+
 
 # these are the hyper parameters that need to be defined
 DATA_SIZE = 100000 # amount of data
@@ -237,12 +231,7 @@ def preprocess2():
         l = labels[i]
         data.append((f, l))
 
-    # data = zip(features, labels)
-
-    # 
-    # print(len(data))
-    # sys.exit()
-
+    
     # shuffle the data each run
     random.shuffle(data)  
     # train = 90% of the records
@@ -250,12 +239,12 @@ def preprocess2():
     train_encoded = data[:int(DATA_SIZE*0.90)]
     test_encoded = data[int(DATA_SIZE*0.90):]
 
-    # return (training data, testing data, vocab length)
+   
     return (train_encoded, test_encoded, len(vocab_to_int))
 
 
-
-newVocab = pd.read_pickle("data/preprocessed.pkl")
+#ignore this line if you don't plan to try importing preprocessed data to combine them with other preprocessed data
+#newVocab = pd.read_pickle("data/preprocessed.pkl")
 def preprocess4():
     print("Applying preprocessing...")
     # clean the reviews
@@ -431,7 +420,7 @@ losses = []
 
 last_hidden = (torch.zeros(3, batch_size, 64), torch.zeros(3, batch_size, 64))
 
-#use this to load in previously used hidden text
+#use this to load in previously used hidden layers
 #with open("data/hidden.txt", 'rb') as f:
  # last_hidden = pickle.load("data/hidden.txt")
 

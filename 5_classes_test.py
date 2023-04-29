@@ -33,13 +33,7 @@ corrector = jamspell.TSpellCorrector()
 corrector.LoadLangModel('data/en.bin')
 lemmatizer = WordNetLemmatizer()
 
-# these are just some notes about the runtimes and accuracies we got
-# data_size  test_acc   train_acc   epochs        
-# 10000      0.633      0.968       15
-# 20000      0.651      0.966       15
-# 50000      0.682      0.950       20
-# 100000     0.693      0.925       30 
-# 250000     0.713      0.885       50 
+
 
 # these are the hyper parameters that need to be defined
 DATA_SIZE = 100000 # amount of data
